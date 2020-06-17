@@ -1,0 +1,13 @@
+[package]
+name = "uri_path_router"
+version = "0.1.0"
+authors = ["Ivo C.S. Wingelaar <ivo@codeforge.rs>"]
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "1.0", features = ["full", "extra-traits"] }
+quote = "1.0"
+proc-macro2 = "1.0"
