@@ -17,7 +17,10 @@ mod matcher;
 ///     },
 ///     "bar" => {
 ///         "a" => BarA,
-///         "b" => BarB,
+///         "b" => BarB {
+///            "x" => X,
+///            "y" => Y,
+///         },
 ///     }
 /// }
 ///
@@ -26,6 +29,9 @@ mod matcher;
 /// assert_eq!(route("/foo/a"), Some(Route::FooA));
 /// assert_eq!(route("/foo/a/b"), None);
 /// assert_eq!(route("/bar/b"), Some(Route::BarB));
+/// assert_eq!(route("/bar/b/"), None);
+/// assert_eq!(route("/bar/b/x"), Some(Route::X));
+/// assert_eq!(route("/bar/b/y"), Some(Route::Y));
 /// assert_eq!(route("/wrong/b"), None);
 /// # }
 ///

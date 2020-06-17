@@ -1,22 +1,17 @@
 use quote::{quote, ToTokens};
 use syn::parse::{Parse, ParseStream, Result};
-use syn::Token;
 
 mod rule;
 
-use rule::Rule;
+use rule::Rules;
 
 pub(crate) struct Matcher {
-    rules: Vec<Box<Rule>>,
+    rules: Rules,
 }
 
 impl Parse for Matcher {
     fn parse(input: ParseStream) -> Result<Self> {
-        let rules = input
-            .parse_terminated::<_, Token![,]>(Rule::parse)?
-            .into_iter()
-            .map(Box::new)
-            .collect();
+        let rules = input.parse()?;
 
         Ok(Matcher { rules })
     }
@@ -26,27 +21,12 @@ impl ToTokens for Matcher {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let mut names = Vec::new();
 
-        for i in &self.rules {
+        for i in self.rules.iter() {
             i.add_names(&mut names);
         }
 
-        let rules = self.rules.iter().map(|x| {
-            let a = &x.pattern;
-
-            quote! {
-                Some(#a) => #x
-            }
-        });
-
-        let x = quote! {
-            let r = match segments.next() {
-                #(#rules),*,
-                _ => return None,
-            };
-
-            Some(r)
-
-        };
+        let rules = &self.rules;
+        let rules = quote! { #rules };
 
         let expand = quote! {
             #[derive(Debug, PartialEq)]
@@ -60,7 +40,11 @@ impl ToTokens for Matcher {
                     return None;
                 }
 
-                #x
+                let next = segments.next();
+
+                let r = #rules;
+
+                Some(r)
             }
         };
 

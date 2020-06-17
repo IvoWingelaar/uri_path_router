@@ -6,7 +6,7 @@ use syn::{braced, token, Token};
 pub(crate) struct Rule {
     pub(crate) pattern: syn::LitStr,
     ty: Option<syn::Ident>,
-    children: Vec<Box<Rule>>,
+    children: Rules,
 }
 
 impl Rule {
@@ -15,9 +15,38 @@ impl Rule {
             names.push(ty.clone());
         }
 
-        for i in &self.children {
+        for i in self.children.iter() {
             i.add_names(names);
         }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct Rules(Vec<Box<Rule>>);
+
+impl std::ops::Deref for Rules {
+    type Target = Vec<Box<Rule>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Default for Rules {
+    fn default() -> Self {
+        Rules(Vec::new())
+    }
+}
+
+impl Parse for Rules {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let rules = input
+            .parse_terminated::<_, Token![,]>(Rule::parse)?
+            .into_iter()
+            .map(Box::new)
+            .collect();
+
+        Ok(Rules(rules))
     }
 }
 
@@ -35,16 +64,11 @@ impl Parse for Rule {
         let ty = input.parse::<syn::Ident>();
 
         let children = if input.peek(token::Brace) {
-            let extra;
-            braced!(extra in input);
-
-            extra
-                .parse_terminated::<_, Token![,]>(Rule::parse)?
-                .into_iter()
-                .map(Box::new)
-                .collect()
+            let children;
+            braced!(children in input);
+            children.parse()?
         } else {
-            Vec::new()
+            Default::default()
         };
 
         Ok(Rule {
@@ -57,11 +81,12 @@ impl Parse for Rule {
 
 impl ToTokens for Rule {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        if self.children.len() > 0 {
-            let rules = self.children.iter().map(|x| {
-                let a = &x.pattern;
-                let ty = &x.ty;
+        let a = &self.pattern;
+        let ty = &self.ty;
+        let children = &self.children;
 
+        let x = if ty.is_some() {
+            if children.len() == 0 {
                 // We are careful to avoid the tail of the path in a match
                 // by forcing the next segment to be `None`.
                 quote! {
@@ -73,25 +98,48 @@ impl ToTokens for Rule {
                         }
                     }
                 }
-            });
-
-            let x = quote! {
-                {
-                    let r = match segments.next() {
-                        #(#rules),*,
-                        _ => return None,
-                    };
-
-                    r
+            } else {
+                quote! {
+                    Some(#a) => {
+                        let next = segments.next();
+                        if next.is_none() {
+                            Route::#ty
+                        } else {
+                            #children
+                        }
+                    }
                 }
-            };
-
-            x.to_tokens(tokens);
+            }
         } else {
-            let ty = &self.ty;
-            let x = quote! { Route::#ty };
+            quote! {
+                Some(#a) => {
+                    let next = segments.next();
+                    #children
+                }
+            }
+        };
 
-            x.to_tokens(tokens);
-        }
+        x.to_tokens(tokens);
+    }
+}
+
+impl ToTokens for Rules {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let rules = self.0.iter().map(|x| {
+            quote! { #x }
+        });
+
+        let x = quote! {
+            {
+                let r = match next {
+                    #(#rules),*,
+                    _ => return None,
+                };
+
+                r
+            }
+        };
+
+        x.to_tokens(tokens);
     }
 }
