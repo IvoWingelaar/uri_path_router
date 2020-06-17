@@ -62,8 +62,16 @@ impl ToTokens for Rule {
                 let a = &x.pattern;
                 let ty = &x.ty;
 
+                // We are careful to avoid the tail of the path in a match
+                // by forcing the next segment to be `None`.
                 quote! {
-                    Some(#a) => Route::#ty
+                    Some(#a) => {
+                        if segments.next().is_none() {
+                            Route::#ty
+                        } else {
+                            return None
+                        }
+                    }
                 }
             });
 

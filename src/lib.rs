@@ -24,6 +24,7 @@ mod matcher;
 /// # fn main() {
 /// // Inside a function you can match routes using:
 /// assert_eq!(route("/foo/a"), Some(Route::FooA));
+/// assert_eq!(route("/foo/a/b"), None);
 /// assert_eq!(route("/bar/b"), Some(Route::BarB));
 /// assert_eq!(route("/wrong/b"), None);
 /// # }
