@@ -17,9 +17,9 @@ mod matcher;
 ///     },
 ///     "bar" => {
 ///         "a" => BarA,
-///         "b" => BarB {
-///            "x" => X,
-///            "y" => Y,
+///         x => Bar(x) {
+///            "x" => X(x),
+///            "y" => Y(x),
 ///         },
 ///     },
 ///     "baz" / "a" =>  {
@@ -35,10 +35,10 @@ mod matcher;
 /// assert_eq!(route("/foo/b"), Some(Route::FooB));
 /// assert_eq!(route("/bar"), None);
 /// assert_eq!(route("/bar/a"), Some(Route::BarA));
-/// assert_eq!(route("/bar/b"), Some(Route::BarB));
-/// assert_eq!(route("/bar/b/"), None);
-/// assert_eq!(route("/bar/b/x"), Some(Route::X));
-/// assert_eq!(route("/bar/b/y"), Some(Route::Y));
+/// assert_eq!(route("/bar/whatever"), Some(Route::Bar { x: "whatever" }));
+/// assert_eq!(route("/bar/whatever/"), None);
+/// assert_eq!(route("/bar/baz/x"), Some(Route::X { x: "baz" }));
+/// assert_eq!(route("/bar/baz/y"), Some(Route::Y { x: "baz" }));
 /// assert_eq!(route("/baz/a/b"), Some(Route::Baz));
 /// assert_eq!(route("/wrong/b"), None);
 /// # }

@@ -19,20 +19,37 @@ impl Parse for Matcher {
 
 impl ToTokens for Matcher {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let mut names = Vec::new();
+        let mut variants = Vec::new();
+
+        let mut has_lifetime = false;
 
         for i in self.rules.iter() {
-            i.add_names(&mut names);
+            if i.add_variant(&mut variants) {
+                has_lifetime = true;
+            }
         }
+
+        let enum_definition = if has_lifetime {
+            quote! {
+                #[derive(Debug, PartialEq)]
+                pub enum Route<'a> {
+                    #(#variants),*
+                }
+            }
+        } else {
+            quote! {
+                #[derive(Debug, PartialEq)]
+                pub enum Route {
+                    #(#variants),*
+                }
+            }
+        };
 
         let rules = &self.rules;
         let rules = quote! { #rules };
 
         let expand = quote! {
-            #[derive(Debug, PartialEq)]
-            pub enum Route {
-                #(#names),*
-            }
+            #enum_definition
             pub fn route(path: &str) -> Option<Route> {
                 let mut segments = path.split("/");
 
