@@ -21,6 +21,9 @@ mod matcher;
 ///            "x" => X,
 ///            "y" => Y,
 ///         },
+///     },
+///     "baz" / "a" =>  {
+///         "b" => Baz,
 ///     }
 /// }
 ///
@@ -36,6 +39,7 @@ mod matcher;
 /// assert_eq!(route("/bar/b/"), None);
 /// assert_eq!(route("/bar/b/x"), Some(Route::X));
 /// assert_eq!(route("/bar/b/y"), Some(Route::Y));
+/// assert_eq!(route("/baz/a/b"), Some(Route::Baz));
 /// assert_eq!(route("/wrong/b"), None);
 /// # }
 ///

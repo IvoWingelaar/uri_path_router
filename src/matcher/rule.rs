@@ -4,7 +4,7 @@ use syn::{braced, token, Token};
 
 #[derive(Debug)]
 pub(crate) struct Rule {
-    pub(crate) pattern: syn::LitStr,
+    pub(crate) pattern: Vec<syn::LitStr>,
     ty: Option<syn::Ident>,
     children: Rules,
 }
@@ -52,11 +52,13 @@ impl Parse for Rules {
 
 impl Parse for Rule {
     fn parse(input: ParseStream) -> Result<Self> {
-        let pattern: syn::LitStr = input.parse()?;
+        let mut pattern = Vec::new();
 
-        while input.peek(Token![,]) {
-            input.parse::<Token![,]>()?;
-            let _: syn::LitStr = input.parse()?;
+        pattern.push(input.parse()?);
+
+        while input.peek(Token![/]) {
+            input.parse::<Token![/]>()?;
+            pattern.push(input.parse()?);
         }
 
         input.parse::<Token![=>]>()?;
@@ -81,7 +83,6 @@ impl Parse for Rule {
 
 impl ToTokens for Rule {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let a = &self.pattern;
         let ty = &self.ty;
         let children = &self.children;
 
@@ -90,36 +91,54 @@ impl ToTokens for Rule {
                 // We are careful to avoid the tail of the path in a match
                 // by forcing the next segment to be `None`.
                 quote! {
-                    Some(#a) => {
-                        if segments.next().is_none() {
-                            Route::#ty
-                        } else {
-                            return None
-                        }
+                    if segments.next().is_none() {
+                        Route::#ty
+                    } else {
+                        return None
                     }
                 }
             } else {
                 quote! {
-                    Some(#a) => {
-                        let next = segments.next();
-                        if next.is_none() {
-                            Route::#ty
-                        } else {
-                            #children
-                        }
+                    let next = segments.next();
+                    if next.is_none() {
+                        Route::#ty
+                    } else {
+                        #children
                     }
                 }
             }
         } else {
             quote! {
-                Some(#a) => {
-                    let next = segments.next();
-                    #children
-                }
+                let next = segments.next();
+                #children
             }
         };
 
-        x.to_tokens(tokens);
+        let a = &self.pattern.last().unwrap();
+
+        let x = quote! {
+            Some(#a) => {
+                #x
+            }
+        };
+
+        let mut prev = x;
+
+        let len = self.pattern.len();
+
+        for i in self.pattern.iter().take(len - 1) {
+            prev = quote! {
+                Some(#i) => {
+                    let next = segments.next();
+                    match next {
+                        #prev,
+                        _ => return None,
+                    }
+                }
+            };
+        }
+
+        prev.to_tokens(tokens);
     }
 }
 
@@ -131,12 +150,10 @@ impl ToTokens for Rules {
 
         let x = quote! {
             {
-                let r = match next {
+                match next {
                     #(#rules),*,
                     _ => return None,
-                };
-
-                r
+                }
             }
         };
 
