@@ -11,6 +11,7 @@ mod matcher;
 /// # use uri_path_router::route;
 /// // Define a routing function with the following match-like syntax:
 /// route! {
+///     Route,
 ///     "foo" => {
 ///         "a" => FooA,
 ///         "b" => FooB,

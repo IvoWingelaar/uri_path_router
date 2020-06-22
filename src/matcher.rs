@@ -6,14 +6,24 @@ mod rule;
 use rule::Rules;
 
 pub(crate) struct Matcher {
+    route_identifier: syn::Ident,
     rules: Rules,
 }
 
 impl Parse for Matcher {
     fn parse(input: ParseStream) -> Result<Self> {
-        let rules = input.parse()?;
+        let route_identifier: syn::Ident = input.parse()?;
 
-        Ok(Matcher { rules })
+        input.parse::<syn::token::Comma>()?;
+
+        let mut rules: Rules = input.parse()?;
+
+        rules.set_route_id(route_identifier.clone());
+
+        Ok(Matcher {
+            route_identifier,
+            rules,
+        })
     }
 }
 
@@ -29,17 +39,19 @@ impl ToTokens for Matcher {
             }
         }
 
+        let route_id = &self.route_identifier;
+
         let enum_definition = if has_lifetime {
             quote! {
                 #[derive(Debug, PartialEq)]
-                pub enum Route<'a> {
+                pub enum #route_id<'a> {
                     #(#variants),*
                 }
             }
         } else {
             quote! {
                 #[derive(Debug, PartialEq)]
-                pub enum Route {
+                pub enum #route_id {
                     #(#variants),*
                 }
             }
@@ -50,7 +62,7 @@ impl ToTokens for Matcher {
 
         let expand = quote! {
             #enum_definition
-            pub fn route(path: &str) -> Option<Route> {
+            pub fn route(path: &str) -> Option<#route_id> {
                 let mut segments = path.split("/");
 
                 if segments.next().is_none() {

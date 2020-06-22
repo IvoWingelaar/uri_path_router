@@ -103,6 +103,7 @@ impl Parse for Captures {
 pub(crate) struct Rule {
     pub(crate) pattern: Captures,
     var: Option<Variant>,
+    route_id: Option<Ident>,
 
     children: Rules,
 }
@@ -130,6 +131,12 @@ impl Rule {
         }
 
         has_lifetime
+    }
+
+    fn set_route_id(&mut self, id: Ident) {
+        self.route_id = Some(id.clone());
+
+        self.children.set_route_id(id);
     }
 }
 
@@ -159,6 +166,14 @@ impl Parse for Rules {
             .collect();
 
         Ok(Rules(rules))
+    }
+}
+
+impl Rules {
+    pub(crate) fn set_route_id(&mut self, id: Ident) {
+        for i in &mut self.0 {
+            i.set_route_id(id.clone());
+        }
     }
 }
 
@@ -201,6 +216,7 @@ impl Parse for Rule {
         Ok(Rule {
             pattern,
             var,
+            route_id: None,
             children,
         })
     }
@@ -211,13 +227,15 @@ impl ToTokens for Rule {
         let ty = &self.var;
         let children = &self.children;
 
+        let route_id = self.route_id.clone().unwrap();
+
         let x = if ty.is_some() {
             if children.len() == 0 {
                 // We are careful to avoid the tail of the path in a match
                 // by forcing the next segment to be `None`.
                 quote! {
                     if segments.next().is_none() {
-                        Route::#ty
+                        #route_id::#ty
                     } else {
                         return None
                     }
@@ -226,7 +244,7 @@ impl ToTokens for Rule {
                 quote! {
                     let next = segments.next();
                     if next.is_none() {
-                        Route::#ty
+                        #route_id::#ty
                     } else {
                         #children
                     }
