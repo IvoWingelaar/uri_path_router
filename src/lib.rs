@@ -25,7 +25,8 @@ mod matcher;
 ///     },
 ///     "baz" / "a" =>  {
 ///         "b" => Baz,
-///     }
+///     },
+///     "long" / x / y / "z" => Long(x, y)
 /// }
 ///
 /// # fn main() {
@@ -41,6 +42,7 @@ mod matcher;
 /// assert_eq!(route("/bar/baz/x"), Some(Route::X { x: "baz" }));
 /// assert_eq!(route("/bar/baz/y"), Some(Route::Y { x: "baz" }));
 /// assert_eq!(route("/baz/a/b"), Some(Route::Baz));
+/// assert_eq!(route("/long/a/b/z"), Some(Route::Long { x: "a", y: "b" }));
 /// assert_eq!(route("/wrong/b"), None);
 /// # }
 ///

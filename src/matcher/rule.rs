@@ -267,7 +267,7 @@ impl ToTokens for Rule {
 
         let len = self.pattern.len();
 
-        for i in self.pattern.iter().take(len - 1) {
+        for i in self.pattern.iter().take(len - 1).rev() {
             prev = quote! {
                 Some(#i) => {
                     let next = segments.next();
