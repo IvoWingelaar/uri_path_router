@@ -4,8 +4,10 @@ version = "0.1.0"
 authors = ["Ivo C.S. Wingelaar <ivo@codeforge.rs>"]
 license = "MIT"
 readme = "README.md"
+repository = "https://github.com/IvoWingelaar/uri_path_router"
 keywords = ["uri", "routing"]
 edition = "2021"
+description = "A proc-macro crate that generates flattened enums for routing"
 
 [lib]
 proc-macro = true
