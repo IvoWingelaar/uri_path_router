@@ -31,19 +31,19 @@ mod matcher;
 ///
 /// # fn main() {
 /// // Inside a function you can match routes using:
-/// assert_eq!(route("/foo"), None);
-/// assert_eq!(route("/foo/a"), Some(Route::FooA));
-/// assert_eq!(route("/foo/a/b"), None);
-/// assert_eq!(route("/foo/b"), Some(Route::FooB));
-/// assert_eq!(route("/bar"), None);
-/// assert_eq!(route("/bar/a"), Some(Route::BarA));
-/// assert_eq!(route("/bar/whatever"), Some(Route::Bar { x: "whatever" }));
-/// assert_eq!(route("/bar/whatever/"), None);
-/// assert_eq!(route("/bar/baz/x"), Some(Route::X { x: "baz" }));
-/// assert_eq!(route("/bar/baz/y"), Some(Route::Y { x: "baz" }));
-/// assert_eq!(route("/baz/a/b"), Some(Route::Baz));
-/// assert_eq!(route("/long/a/b/z"), Some(Route::Long { x: "a", y: "b" }));
-/// assert_eq!(route("/wrong/b"), None);
+/// assert_eq!(Route::try_from("/foo"), Err(()));
+/// assert_eq!(Route::try_from("/foo/a"), Ok(Route::FooA));
+/// assert_eq!(Route::try_from("/foo/a/b"), Err(()));
+/// assert_eq!(Route::try_from("/foo/b"), Ok(Route::FooB));
+/// assert_eq!(Route::try_from("/bar"), Err(()));
+/// assert_eq!(Route::try_from("/bar/a"), Ok(Route::BarA));
+/// assert_eq!(Route::try_from("/bar/whatever"), Ok(Route::Bar { x: "whatever" }));
+/// assert_eq!(Route::try_from("/bar/whatever/"), Err(()));
+/// assert_eq!(Route::try_from("/bar/baz/x"), Ok(Route::X { x: "baz" }));
+/// assert_eq!(Route::try_from("/bar/baz/y"), Ok(Route::Y { x: "baz" }));
+/// assert_eq!(Route::try_from("/baz/a/b"), Ok(Route::Baz));
+/// assert_eq!(Route::try_from("/long/a/b/z"), Ok(Route::Long { x: "a", y: "b" }));
+/// assert_eq!(Route::try_from("/wrong/b"), Err(()));
 /// # }
 ///
 /// ```

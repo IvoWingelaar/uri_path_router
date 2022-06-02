@@ -60,20 +60,39 @@ impl ToTokens for Matcher {
         let rules = &self.rules;
         let rules = quote! { #rules };
 
+        let impl_head = if has_lifetime {
+            quote! { impl<'a> TryFrom<&'a str> for #route_id<'a> }
+        } else {
+            quote! { impl TryFrom<&str> for #route_id }
+        };
+
+        let fn_head = if has_lifetime {
+            quote! { fn try_from(path: &'a str) -> Result<#route_id<'a>, ()> }
+        } else {
+            quote! { fn try_from(path: &str) -> Result<#route_id, ()> }
+        };
+
         let expand = quote! {
             #enum_definition
-            pub fn route(path: &str) -> Option<#route_id> {
-                let mut segments = path.split("/");
 
-                if segments.next().is_none() {
-                    return None;
+            use core::convert::TryFrom;
+
+            #impl_head {
+                type Error = ();
+
+                #fn_head {
+                    let mut segments = path.split("/");
+
+                    if segments.next().is_none() {
+                        return Err(());
+                    }
+
+                    let next = segments.next();
+
+                    let r = #rules;
+
+                    Ok(r)
                 }
-
-                let next = segments.next();
-
-                let r = #rules;
-
-                Some(r)
             }
         };
 

@@ -237,7 +237,7 @@ impl ToTokens for Rule {
                     if segments.next().is_none() {
                         #route_id::#ty
                     } else {
-                        return None
+                        return Err(())
                     }
                 }
             } else {
@@ -273,7 +273,7 @@ impl ToTokens for Rule {
                     let next = segments.next();
                     match next {
                         #prev,
-                        _ => return None,
+                        _ => return Err(()),
                     }
                 }
             };
@@ -293,7 +293,7 @@ impl ToTokens for Rules {
             {
                 match next {
                     #(#rules),*,
-                    _ => return None,
+                    _ => return Err(()),
                 }
             }
         };
