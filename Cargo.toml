@@ -2,6 +2,9 @@
 name = "uri_path_router"
 version = "0.1.0"
 authors = ["Ivo C.S. Wingelaar <ivo@codeforge.rs>"]
+license = "MIT"
+readme = "README.md"
+keywords = ["uri", "routing"]
 edition = "2021"
 
 [lib]
