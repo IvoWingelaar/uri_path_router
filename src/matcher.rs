@@ -20,6 +20,8 @@ impl Parse for Matcher {
 
         rules.set_route_id(route_identifier.clone());
 
+        rules.walk_tree(&[]);
+
         Ok(Matcher {
             route_identifier,
             rules,

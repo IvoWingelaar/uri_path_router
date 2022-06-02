@@ -3,7 +3,7 @@ use syn::parse::{Parse, ParseStream, Result};
 use syn::{braced, token, Token};
 use syn::{punctuated::Punctuated, Ident};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Capture {
     Lit(syn::LitStr),
     Var(syn::Ident),
@@ -29,11 +29,12 @@ pub(crate) struct Variant {
     ident: Ident,
     fields: Option<Punctuated<Ident, Token![,]>>,
     add_types: bool,
+    doc: String,
 }
 
-impl ToTokens for Variant {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        if let Some(fields) = &self.fields {
+impl Variant {
+    fn variant_tokens(&self, tokens: &mut proc_macro2::TokenStream, output_doc: bool) {
+        let x = if let Some(fields) = &self.fields {
             let ident = &self.ident;
             let iter = fields.into_iter();
 
@@ -47,7 +48,7 @@ impl ToTokens for Variant {
                 }
             };
 
-            x.to_tokens(tokens);
+            x
         } else {
             let ident = &self.ident;
 
@@ -55,12 +56,39 @@ impl ToTokens for Variant {
                 #ident
             };
 
-            x.to_tokens(tokens);
-        }
+            x
+        };
+
+        let x = if output_doc {
+            let msg = &self.doc;
+            quote! {
+                #[doc = #msg]
+                #x
+            }
+        } else {
+            x
+        };
+
+        x.to_tokens(tokens);
     }
 }
 
-#[derive(Debug)]
+impl ToTokens for Variant {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.variant_tokens(tokens, true);
+    }
+}
+
+// Skips output tokens for the doc code.
+struct SkipVariant<'a>(&'a Variant);
+
+impl<'a> ToTokens for SkipVariant<'a> {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.0.variant_tokens(tokens, false);
+    }
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct Captures(Vec<Capture>);
 
 impl std::ops::Deref for Captures {
@@ -104,6 +132,7 @@ pub(crate) struct Rule {
     pub(crate) pattern: Captures,
     var: Option<Variant>,
     route_id: Option<Ident>,
+    root: Captures,
 
     children: Rules,
 }
@@ -121,6 +150,30 @@ impl Rule {
                 }
             }
 
+            let mut doc = String::new();
+
+            for i in &self.root.0 {
+                let string = match i {
+                    Capture::Lit(lit) => lit.value(),
+                    Capture::Var(var) => format!("{{{}}}", var.to_string()),
+                };
+                doc.push_str(&format!("/{}", string));
+            }
+
+            for i in &self.pattern.0 {
+                let string = match i {
+                    Capture::Lit(lit) => lit.value(),
+                    Capture::Var(var) => format!("{{{}}}", var.to_string()),
+                };
+
+                doc.push_str(&format!("/{}", string));
+            }
+
+            v.doc = format!(
+                "This variant will match a URI path bescribed by the following pattern: `{}`",
+                doc
+            );
+
             variants.push(v);
         }
 
@@ -131,6 +184,14 @@ impl Rule {
         }
 
         has_lifetime
+    }
+
+    fn walk_tree(&mut self, root: &[Capture]) {
+        self.root = Captures(root.into());
+        let mut root: Vec<_> = root.into();
+
+        root.extend(self.pattern.0.iter().cloned());
+        self.children.walk_tree(&root);
     }
 
     fn set_route_id(&mut self, id: Ident) {
@@ -175,6 +236,13 @@ impl Rules {
             i.set_route_id(id.clone());
         }
     }
+
+    /// Breadth-first traversal to update the pattern roots
+    pub(crate) fn walk_tree(&mut self, root: &[Capture]) {
+        for i in &mut self.0 {
+            i.walk_tree(root);
+        }
+    }
 }
 
 impl Parse for Rule {
@@ -200,6 +268,7 @@ impl Parse for Rule {
                 ident,
                 fields,
                 add_types: false,
+                doc: "".to_string(),
             })
         } else {
             None
@@ -215,6 +284,7 @@ impl Parse for Rule {
 
         Ok(Rule {
             pattern,
+            root: Captures(Vec::new()),
             var,
             route_id: None,
             children,
@@ -230,6 +300,10 @@ impl ToTokens for Rule {
         let route_id = self.route_id.clone().unwrap();
 
         let x = if ty.is_some() {
+            // This skips the documentation production.
+            let ty = ty.as_ref().unwrap();
+            let ty = SkipVariant(&ty);
+
             if children.len() == 0 {
                 // We are careful to avoid the tail of the path in a match
                 // by forcing the next segment to be `None`.
