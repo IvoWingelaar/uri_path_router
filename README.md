@@ -58,10 +58,11 @@ assert_eq!(
 );
 ```
 
-# Further work
-
-- Output proper documentation when a consumer compiles a crate containing the
-generated `enum` with `cargo doc`.
+A nifty feature of this crate is that documentation is auto-generated for
+every variant of the `enum` describing what pattern matches it.
+You can check this out by hovering over the variant in your IDE (assuming you
+have `rust-analyzer` or something similar configured to display tooltips), or
+by running `cargo doc` on your crate and searching for the generated `enum`.
 
 # License
 
